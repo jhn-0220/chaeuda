@@ -129,6 +129,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .rowbar { display: grid; grid-template-columns: 64px 1fr 48px; align-items: center; gap: var(--sp-3); font-size: var(--fs-sub); }
   .rowbar b { text-align: right; font-variant-numeric: tabular-nums; }
   .field textarea { resize: none; }
+
+  /* 시민 보기와 창업자 보기 */
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-1); padding: var(--sp-1); border-radius: 12px; background: color-mix(in srgb, var(--ink) 7%, var(--bg)); }
+  .seg button { min-height: 44px; border: 0; border-radius: 9px; background: none; color: var(--ink-2); font-weight: 700; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 18%, transparent); }
+  .part { display: flex; flex-direction: column; gap: 20px; }
+  .part .sub { text-wrap: balance; }
+  .want { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px var(--sp-3); }
+  .want .bar { grid-column: 1 / -1; }
+  .want b { font-variant-numeric: tabular-nums; }
+  .rec { display: flex; flex-direction: column; gap: var(--sp-1); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+  .rec:first-of-type { padding-top: 0; border-top: 0; }
+  .rec .money { font-size: var(--fs-h); font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -137,9 +150,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
   <section class="screen on" data-screen="지도">
     <header class="topbar"><h1 class="brand"><svg viewBox="0 0 120 120" aria-hidden="true"><path class="ink" stroke-width="10" d="M50 14 H70"/><path class="ink" stroke-width="10" d="M22 56 L60 30 L98 56"/><path class="ink" stroke-width="10" d="M32 66 V104 H88 V66"/><circle class="acc" cx="60" cy="84" r="13"/></svg>채우다</h1><span class="cap">서문시장, 청라언덕</span></header>
     <main class="content">
+      <div class="seg" role="group" aria-label="누가 보나요">
+        <button data-mode="citizen" aria-pressed="true">시민 보기</button>
+        <button data-mode="founder" aria-pressed="false">창업자 보기</button>
+      </div>
       <div class="stack">
         <p class="big">1층 빈 점포 <span class="accent" id="vacCount">0곳</span></p>
-        <p class="sub">파란 점을 누르면 시민이 바라는 가게가 보여요</p>
+        <p class="sub" id="mapSub"></p>
       </div>
       <div class="chips" role="group" aria-label="지도 종류">
         <button class="chip on" data-view="real">실제 지도</button>
@@ -163,7 +180,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
         <button class="chip" data-filter="none">제안 없는 곳</button>
       </div>
       <div class="stack">
-        <p class="h">공감을 많이 받은 빈 점포</p>
+        <p class="h" id="topHead"></p>
         <div class="list" id="topList"></div>
       </div>
       <p class="cap">점포 위치와 제안은 시제품용 예시입니다. 지도 카카오맵.</p>
@@ -171,7 +188,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   </section>
 
   <section class="screen" data-screen="점포">
-    <header class="topbar"><button class="icon-btn back" data-go="지도" aria-label="뒤로"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1 id="shopName">점포</h1></header>
+    <header class="topbar"><button class="icon-btn back" data-go="지도" aria-label="뒤로"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1 id="shopName">점포</h1><span class="badge" id="modeBadge"></span></header>
     <main class="content">
       <div class="stack">
         <p class="big" id="shopBig"></p>
@@ -182,10 +199,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
         <a class="btn" id="rvLink" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>로드뷰로 보기</a>
         <a class="btn" id="mapLink" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>지도 앱으로</a>
       </div>
-      <div class="list" id="suggList"></div>
+      <div class="part" id="founderPart" hidden>
+        <div class="card">
+          <p class="h">시민들이 원하는 가게</p>
+          <div class="stack" id="wantList"></div>
+        </div>
+        <div class="card">
+          <p class="h">AI 추천 업종과 예상 월매출</p>
+          <div class="stack" id="recList"></div>
+        </div>
+        <div class="card">
+          <p class="h">이 자리의 문 닫은 기록</p>
+          <div class="stack" id="closedInfo"></div>
+        </div>
+      </div>
 
+      <div class="part" id="citizenPart">
       <div class="card">
-        <p class="h">여기 이런 가게가 들어왔으면</p>
+        <p class="h">바라는 가게 남기기</p>
         <label class="field"><span class="label">바라는 가게</span>
           <input id="newText" maxlength="30" placeholder="예: 늦게까지 여는 떡볶이집"></label>
         <div class="stack">
@@ -202,6 +233,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
         </div>
         <button class="btn primary block" id="addBtn">제안 남기기</button>
       </div>
+      <div class="stack">
+        <p class="h">다른 시민들의 제안</p>
+        <div class="list" id="suggList"></div>
+      </div>
+      </div>
 
       <div class="card">
         <p class="h">이 점포는</p>
@@ -211,7 +247,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
           <div><span class="label">전에 있던 가게</span><b id="fBefore"></b></div>
         </div>
       </div>
-      <p class="cap">점포와 제안은 시제품용 예시입니다.</p>
+      <p class="cap" id="shopCap">점포와 제안은 시제품용 예시입니다.</p>
     </main>
   </section>
 
@@ -235,13 +271,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
     <main class="content">
       <p class="big">빈 점포에 시민의 바람을 모아 창업자에게 보여 줍니다</p>
       <ol class="steps">
-        <li><p><b>지도</b>에서 빈 1층 점포를 찾고</p></li>
+        <li><p><b>시민 보기</b>에서 빈 1층 점포를 골라</p></li>
         <li><p><b>바라는 가게</b>를 남기거나 공감을 누르면</p></li>
-        <li><p>비슷한 제안은 <b>하나로 묶여</b> 공감이 더해집니다</p></li>
+        <li><p>비슷한 제안은 <b>하나로 묶여</b> 공감이 더해지고</p></li>
+        <li><p><b>창업자 보기</b>에서 그 바람과 추천 업종, 예상 월매출, 문 닫은 기록을 함께 봅니다</p></li>
       </ol>
       <div class="list">
         <div><span class="label">지금 묶는 방법</span><span class="v">글자가 비슷한지 비교</span></div>
         <div><span class="label">서비스에서</span><span class="v">GPT가 뜻으로 묶음</span></div>
+        <div><span class="label">예상 매출</span><span class="v">지금은 예시, 서비스는 소상공인365</span></div>
         <div><span class="label">저장</span><span class="v">이 기기 브라우저에만</span></div>
       </div>
       <button class="btn block" id="resetBtn">처음 상태로 되돌리기</button>
@@ -286,6 +324,34 @@ const SEED = [
   { id: "v12", name: "1지구 북쪽 1층 9호", x: 140, y: 20, area: "18㎡", empty: "7개월", before: "양말 가게",
     s: [["손뜨개 체험 공방", "체험", 15], ["수제 디저트 카페", "카페", 9]] }
 ];
+
+/* 창업자 보기용 예시: 업종별 월매출 범위(만원, 30㎡ 기준)와 자리마다 문 닫은 이유 */
+const MONEY = { 먹거리: [1400, 2300], 카페: [900, 1600], 소품: [700, 1300], 체험: [600, 1200], 생활: [800, 1500] };
+const WHY = {
+  v1: "원단 도매 손님이 온라인 주문으로 옮겨 가며 줄었어요",
+  v2: "저녁 6시면 닫아 야시장 손님을 받지 못했어요",
+  v3: "단추, 부자재 손님이 줄고 임대료 부담이 컸어요",
+  v4: "그릇 도매가 큰 매장과 온라인으로 옮겨 갔어요",
+  v5: "주변에 같은 신발 가게가 많아 손님이 나뉘었어요",
+  v6: "가방 도매 손님이 줄었어요",
+  v7: "건어물 가게가 2지구 쪽으로 옮겨 갔어요",
+  v8: "커튼 맞춤 손님이 줄었어요",
+  v9: "휴대폰으로 사진을 찍으며 사진관 손님이 줄었어요",
+  v10: "주변에 분식집이 셋 더 생겼어요",
+  v11: "의류 도매가 온라인으로 옮겨 가며 큰 점포가 비었어요",
+  v12: "양말 도매 손님이 줄었어요"
+};
+const won = (n) => n.toLocaleString("ko-KR");
+const nearCount = (id, c) => [...(id + c)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 4 + 1;
+function moneyRange(v, c) {
+  const f = Math.min(1.3, Math.max(0.75, parseInt(v.area, 10) / 30));
+  const [lo, hi] = MONEY[c] || MONEY["생활"];
+  return [Math.round(lo * f / 100) * 100, Math.round(hi * f / 100) * 100];
+}
+
+const MODE_KEY = "chaeuda-mode";
+let mode = "citizen";
+try { if (localStorage.getItem(MODE_KEY) === "founder") mode = "founder"; } catch (e) {}
 
 const KEY = "chaeuda-proto-v1";
 const fresh = () => ({
@@ -405,7 +471,7 @@ function relayoutReal() {
 function kakaoReason() {
   if (location.protocol === "file:") return "파일을 더블클릭해서 열면 카카오맵이 막힙니다. 카카오 개발자 사이트에 등록한 주소(http:// 또는 https://로 시작)로 열어 주세요.";
   if (!navigator.onLine) return "인터넷에 연결되어 있지 않습니다.";
-  return `카카오가 이 주소를 허용하지 않았습니다. 카카오 개발자 사이트의 앱 설정에서 플랫폼, Web, 사이트 도메인에 ${location.origin} 을 등록해 주세요.`;
+  return `카카오가 지도를 보내 주지 않았습니다. 카카오 개발자 사이트에서 두 가지를 확인해 주세요. 1. 제품 설정, 카카오맵에서 사용 설정이 켜져 있는지. 2. 플랫폼, Web, 사이트 도메인에 ${location.origin} 이 등록되어 있는지.`;
 }
 function showNote(text) {
   document.getElementById("mapNote").hidden = !text;
@@ -494,20 +560,34 @@ function openShop(id) {
 function drawShop() {
   const v = db.shops.find((x) => x.id === current); if (!v) return;
   const list = sorted(v);
+  const founder = mode === "founder";
   document.getElementById("shopName").textContent = v.name;
-  if (list.length) {
-    document.getElementById("shopBig").innerHTML = `시민들은 <span class="accent">${esc(list[0].t)}</span>${josa(list[0].t)} 가장 바라요`;
-    document.getElementById("shopSub").textContent = `제안 ${list.length}개, 공감 ${total(v)}`;
+  document.getElementById("modeBadge").textContent = founder ? "창업자 보기" : "시민 보기";
+  document.getElementById("founderPart").hidden = !founder;
+  document.getElementById("citizenPart").hidden = founder;
+  const big = document.getElementById("shopBig"), sub = document.getElementById("shopSub");
+  if (founder) {
+    if (list.length) {
+      big.innerHTML = `시민들이 <span class="accent">${esc(list[0].t)}</span>${josa(list[0].t)} 원하고 있어요`;
+      sub.textContent = `공감 ${list[0].n}개. 이 자리에 모인 제안 ${list.length}개, 공감 ${total(v)}개`;
+    } else {
+      big.innerHTML = `아직 시민 제안이 없는 자리예요`;
+      sub.textContent = `아래 추천은 주변 후기와 상권 자료로만 만들었어요`;
+    }
+    drawFounder(v, list);
   } else {
-    document.getElementById("shopBig").innerHTML = `아직 제안이 없어요`;
-    document.getElementById("shopSub").textContent = `처음으로 바라는 가게를 남겨 주세요`;
+    big.innerHTML = `이 자리에 무엇이 들어오면 좋을까요?`;
+    sub.textContent = `전에는 ${v.before}, ${v.empty}째 비어 있어요`;
   }
+  document.getElementById("shopCap").textContent = founder
+    ? "점포, 제안, 매출 범위, 문 닫은 이유는 모두 시제품용 예시입니다. 서비스에서는 소상공인365 추정 매출과 상가정보, 후기를 AI가 읽어 계산합니다."
+    : "점포와 제안은 시제품용 예시입니다.";
   document.getElementById("suggList").innerHTML = list.length ? list.map((x, i) => `
     <div class="sugg${x.id === flashId ? " new" : ""}">
       <span class="rank">${i + 1}</span>
       <span class="grow"><span class="t">${esc(x.t)}</span><br><span class="cap">${x.c}</span></span>
       <button class="like" data-like="${x.id}" aria-pressed="${!!db.liked[x.id]}" aria-label="공감">${heart}${x.n}</button>
-    </div>`).join("") : `<p class="empty">이 빈 점포에 어떤 가게가 오면 좋을까요?</p>`;
+    </div>`).join("") : `<p class="empty">아직 제안이 없어요. 처음으로 남겨 주세요.</p>`;
   flashId = null;
   document.getElementById("fArea").textContent = v.area;
   const [lat, lng] = pos(v);
@@ -516,6 +596,43 @@ function drawShop() {
   document.getElementById("fEmpty").textContent = v.empty;
   document.getElementById("fBefore").textContent = v.before;
 }
+/* 창업자 보기: 시민 바람, AI 추천과 예상 월매출, 문 닫은 기록 */
+function drawFounder(v, list) {
+  const max = list.length ? list[0].n : 1;
+  document.getElementById("wantList").innerHTML = list.length ? list.slice(0, 5).map((x) => `
+    <div class="want"><span>${esc(x.t)} <span class="cap">${x.c}</span></span><b>공감 ${x.n}</b>
+      <div class="bar" style="--v:${Math.round(x.n / max * 100)}"><i></i></div></div>`).join("")
+    : `<p class="sub">아직 없어요. 시민 보기에서 제안이 모이면 여기에 보여요.</p>`;
+  const picks = [];
+  list.forEach((x) => { if (picks.length < 3 && !picks.some((p) => p.c === x.c)) picks.push(x); });
+  if (!picks.length) picks.push({ t: "포장 먹거리", c: "먹거리", n: 0 }, { t: "쉬어 가는 카페", c: "카페", n: 0 });
+  document.getElementById("recList").innerHTML = picks.map((x, i) => {
+    const [lo, hi] = moneyRange(v, x.c), k = nearCount(v.id, x.c);
+    const why = x.n ? `시민 공감 ${x.n}개, 주변 같은 업종 ${k}곳` : `주변 후기에서 자주 찾는 업종, 주변 같은 업종 ${k}곳`;
+    return `<div class="rec"><div class="row between"><b>${esc(x.t)}</b><span class="badge">추천 ${i + 1}</span></div>
+      <span class="money">월 ${won(lo)}만에서 ${won(hi)}만원</span>
+      <span class="sub">${why}</span></div>`;
+  }).join("") + `<p class="cap">매출은 숫자 하나가 아니라 범위로 보여 줍니다. 근거: 소상공인365 같은 업종 추정 매출, 점포 넓이 ${v.area}</p>`;
+  document.getElementById("closedInfo").innerHTML = `
+    <div class="row between"><span class="label">전에 있던 가게</span><b>${esc(v.before)}</b></div>
+    <div class="row between"><span class="label">비어 있은 지</span><b>${esc(v.empty)}</b></div>
+    <p class="sub">문 닫은 이유: ${esc(WHY[v.id] || "기록이 없어요")}</p>
+    <p class="cap">AI가 상가 기록과 후기를 읽어 정리합니다.</p>`;
+}
+
+/* 시민 보기와 창업자 보기 바꾸기 */
+function setMode(m) {
+  mode = m;
+  try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+  document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  document.getElementById("mapSub").textContent = m === "founder"
+    ? "파란 점을 누르면 시민이 원하는 가게와 예상 매출이 보여요"
+    : "파란 점을 누르면 그 자리에 바라는 가게를 남길 수 있어요";
+  document.getElementById("topHead").textContent = m === "founder" ? "시민 수요가 큰 빈 점포" : "공감을 많이 받은 빈 점포";
+  drawShop();
+}
+document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
 document.getElementById("suggList").addEventListener("click", (e) => {
   const b = e.target.closest("[data-like]"); if (!b) return;
   toggleLike(b.dataset.like);
@@ -611,8 +728,16 @@ document.addEventListener("click", (e) => {
   if (chip) chip.parentElement.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c === chip));
 });
 setView("real");
+setMode(mode);
 drawAll();
-const fromHash = () => location.hash.length > 1 && show(decodeURIComponent(location.hash.slice(1)));
+/* 주소 끝에 #창업자/점포 처럼 쓰면 그 보기로 바로 열림 */
+const fromHash = () => {
+  if (location.hash.length < 2) return;
+  let h = decodeURIComponent(location.hash.slice(1));
+  const m = h.match(/^(시민|창업자)\/(.+)$/);
+  if (m) { setMode(m[1] === "창업자" ? "founder" : "citizen"); h = m[2]; }
+  show(h);
+};
 addEventListener("hashchange", fromHash);
 fromHash();
 </script>
