@@ -1,0 +1,11 @@
+[build]
+  # Plain static site: a single self-contained HTML file, no build step.
+  publish = "."
+  command = "echo 'No build step: static site'"
+
+# The page is named "index (6).html", so there is no index.html at the root.
+# Serve it at "/" without renaming the file.
+[[redirects]]
+  from = "/"
+  to = "/index (6).html"
+  status = 200
