@@ -141,6 +141,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .want b { font-variant-numeric: tabular-nums; }
   .rec { display: flex; flex-direction: column; gap: var(--sp-1); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
   .rec:first-of-type { padding-top: 0; border-top: 0; }
+  .vsec { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+  .miss { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-3); font-size: var(--fs-sub); }
+  .miss b { color: var(--accent); font-variant-numeric: tabular-nums; }
   .rec .money { font-size: var(--fs-h); font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
 </style>
 </head>
@@ -205,11 +208,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
           <div class="stack" id="wantList"></div>
         </div>
         <div class="card">
+          <p class="h">이 근처에 오는 사람들</p>
+          <div class="stack" id="visitInfo"></div>
+        </div>
+        <div class="card">
           <p class="h">AI 추천 업종과 예상 월매출</p>
           <div class="stack" id="recList"></div>
         </div>
         <div class="card">
-          <p class="h">이 자리의 문 닫은 기록</p>
+          <p class="h">이 자리의 기록</p>
           <div class="stack" id="closedInfo"></div>
         </div>
       </div>
@@ -239,7 +246,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
       </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="factsCard">
         <p class="h">이 점포는</p>
         <div class="facts3">
           <div><span class="label">넓이</span><b id="fArea"></b></div>
@@ -341,6 +348,28 @@ const WHY = {
   v11: "의류 도매가 온라인으로 옮겨 가며 큰 점포가 비었어요",
   v12: "양말 도매 손님이 줄었어요"
 };
+/* 방문객 요약 예시: 구역마다 후기와 게시물을 AI가 읽어 정리했다고 가정한 결과 */
+const VISIT = {
+  "1지구": { n: 286, who: [["20대", 34], ["어르신", 26], ["외국인", 22], ["가족", 18]], when: [["주말 낮", 40], ["야시장", 38], ["평일 낮", 22]],
+    why: "원단과 한복 구경, 칼국수와 납작만두, 야시장 먹거리",
+    miss: [["사진 찍을 만한 곳이 없다", 37], ["앉아서 쉴 데가 없다", 29], ["저녁엔 문 연 가게가 적다", 22]] },
+  "2지구": { n: 241, who: [["20대", 41], ["가족", 21], ["외국인", 19], ["어르신", 19]], when: [["야시장", 46], ["주말 낮", 36], ["평일 낮", 18]],
+    why: "야시장 먹거리, 디저트와 간식, 사진 찍기",
+    miss: [["앉아서 먹을 데가 없다", 44], ["디저트 가게가 없다", 31], ["줄이 너무 길다", 18]] },
+  "4지구": { n: 198, who: [["20대", 37], ["외국인", 27], ["어르신", 22], ["가족", 14]], when: [["주말 낮", 45], ["야시장", 30], ["평일 낮", 25]],
+    why: "옷과 신발 구경, 빈티지 쇼핑, 외국인 관광 코스",
+    miss: [["젊은 사람이 살 옷이 적다", 33], ["카드가 안 되는 가게가 있다", 21], ["영어 안내가 없다", 17]] },
+  "5지구": { n: 104, who: [["어르신", 39], ["20대", 26], ["가족", 20], ["외국인", 15]], when: [["평일 낮", 40], ["주말 낮", 38], ["야시장", 22]],
+    why: "건어물과 반찬 장보기, 명절 장보기",
+    miss: [["주차가 어렵다", 28], ["포장해 갈 반찬이 적다", 19], ["쉬어 갈 데가 없다", 15]] },
+  "동산상가": { n: 157, who: [["20대", 33], ["어르신", 24], ["가족", 22], ["외국인", 21]], when: [["야시장", 52], ["주말 낮", 30], ["평일 낮", 18]],
+    why: "야시장 먹거리, 막창과 간식, 포장해 가기",
+    miss: [["포장해 갈 가게가 적다", 35], ["화장실 찾기가 어렵다", 24], ["앉을 데가 없다", 20]] },
+  "청라언덕 아래": { n: 223, who: [["20대", 39], ["가족", 29], ["외국인", 18], ["어르신", 14]], when: [["주말 낮", 58], ["평일 낮", 28], ["야시장", 14]],
+    why: "청라언덕과 근대골목 산책, 선교사 주택과 계산성당 사진",
+    miss: [["산책 뒤 쉴 카페가 적다", 39], ["대구 기념품을 살 곳이 없다", 26], ["근대골목 이야기를 들을 곳이 없다", 18]] }
+};
+const visitOf = (v) => VISIT[Object.keys(VISIT).find((k) => v.name.startsWith(k))];
 const won = (n) => n.toLocaleString("ko-KR");
 const nearCount = (id, c) => [...(id + c)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 4 + 1;
 function moneyRange(v, c) {
@@ -565,6 +594,7 @@ function drawShop() {
   document.getElementById("modeBadge").textContent = founder ? "창업자 보기" : "시민 보기";
   document.getElementById("founderPart").hidden = !founder;
   document.getElementById("citizenPart").hidden = founder;
+  document.getElementById("factsCard").hidden = founder;
   const big = document.getElementById("shopBig"), sub = document.getElementById("shopSub");
   if (founder) {
     if (list.length) {
@@ -580,7 +610,7 @@ function drawShop() {
     sub.textContent = `전에는 ${v.before}, ${v.empty}째 비어 있어요`;
   }
   document.getElementById("shopCap").textContent = founder
-    ? "점포, 제안, 매출 범위, 문 닫은 이유는 모두 시제품용 예시입니다. 서비스에서는 소상공인365 추정 매출과 상가정보, 후기를 AI가 읽어 계산합니다."
+    ? "점포, 제안, 방문객 요약, 매출 범위, 문 닫은 이유는 모두 시제품용 예시입니다. 서비스에서는 소상공인365 추정 매출과 상가정보, 후기를 AI가 읽어 계산합니다."
     : "점포와 제안은 시제품용 예시입니다.";
   document.getElementById("suggList").innerHTML = list.length ? list.map((x, i) => `
     <div class="sugg${x.id === flashId ? " new" : ""}">
@@ -603,6 +633,17 @@ function drawFounder(v, list) {
     <div class="want"><span>${esc(x.t)} <span class="cap">${x.c}</span></span><b>공감 ${x.n}</b>
       <div class="bar" style="--v:${Math.round(x.n / max * 100)}"><i></i></div></div>`).join("")
     : `<p class="sub">아직 없어요. 시민 보기에서 제안이 모이면 여기에 보여요.</p>`;
+  const vi = visitOf(v);
+  const bars = (rows) => rows.map(([k, p]) =>
+    `<div class="rowbar"><span>${k}</span><div class="bar" style="--v:${Math.round(p / rows[0][1] * 100)}"><i></i></div><b>${p}%</b></div>`).join("");
+  document.getElementById("visitInfo").innerHTML = vi ? `
+    <p class="sub">이 근처 후기와 게시물 ${vi.n}건을 AI가 읽고 정리했어요</p>
+    <div class="vsec"><span class="label">누가 오나요</span>${bars(vi.who)}</div>
+    <div class="vsec"><span class="label">언제 오나요</span>${bars(vi.when)}<span class="cap">야시장은 저녁 7시부터 문 닫을 때까지</span></div>
+    <div class="vsec"><span class="label">무엇 때문에 오나요</span><p>${esc(vi.why)}</p></div>
+    <div class="vsec"><span class="label">없어서 아쉬웠다는 말</span>${vi.miss.map(([t, n]) =>
+      `<div class="miss"><span>"${esc(t)}"</span><b>${n}건</b></div>`).join("")}</div>`
+    : `<p class="sub">이 근처 후기가 아직 모이지 않았어요.</p>`;
   const picks = [];
   list.forEach((x) => { if (picks.length < 3 && !picks.some((p) => p.c === x.c)) picks.push(x); });
   if (!picks.length) picks.push({ t: "포장 먹거리", c: "먹거리", n: 0 }, { t: "쉬어 가는 카페", c: "카페", n: 0 });
@@ -616,6 +657,7 @@ function drawFounder(v, list) {
   document.getElementById("closedInfo").innerHTML = `
     <div class="row between"><span class="label">전에 있던 가게</span><b>${esc(v.before)}</b></div>
     <div class="row between"><span class="label">비어 있은 지</span><b>${esc(v.empty)}</b></div>
+    <div class="row between"><span class="label">넓이</span><b>${esc(v.area)}</b></div>
     <p class="sub">문 닫은 이유: ${esc(WHY[v.id] || "기록이 없어요")}</p>
     <p class="cap">AI가 상가 기록과 후기를 읽어 정리합니다.</p>`;
 }
