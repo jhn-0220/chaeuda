@@ -212,7 +212,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
           <div class="stack" id="visitInfo"></div>
         </div>
         <div class="card">
-          <p class="h">AI 추천 업종과 예상 월매출</p>
+          <div class="row between"><p class="h">AI 추천 업종과 예상 월매출</p><span class="badge">예시</span></div>
           <div class="stack" id="recList"></div>
         </div>
         <div class="card">
@@ -285,7 +285,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
       </ol>
       <div class="list">
         <div><span class="label">지금 묶는 방법</span><span class="v">글자가 비슷한지 비교</span></div>
-        <div><span class="label">서비스에서</span><span class="v">GPT가 뜻으로 묶음</span></div>
+        <div><span class="label">서비스에서</span><span class="v">AI(Claude)가 뜻으로 묶음</span></div>
         <div><span class="label">예상 매출</span><span class="v">지금은 예시, 서비스는 소상공인365</span></div>
         <div><span class="label">저장</span><span class="v">이 기기 브라우저에만</span></div>
       </div>
@@ -397,7 +397,7 @@ const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">"
 let current = null, filter = "all";
 const josa = (s) => { const c = s.charCodeAt(s.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 === 0 ? "를" : "을"; };
 
-/* 비슷한 제안 찾기: 시제품에서는 글자가 비슷한지로 묶는다(서비스에서는 GPT가 뜻으로 묶음) */
+/* 비슷한 제안 찾기: 시제품에서는 글자가 비슷한지로 묶는다(서비스에서는 Claude가 뜻으로 묶음) */
 const norm = (s) => s.replace(/\s+/g, "").replace(/(가게|집|점|샵|전문점)$/, "");
 const grams = (s) => { const g = new Set(); for (let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i + 2)); return g; };
 const sim = (a, b) => {
@@ -637,7 +637,7 @@ function drawFounder(v, list) {
   const bars = (rows) => rows.map(([k, p]) =>
     `<div class="rowbar"><span>${k}</span><div class="bar" style="--v:${Math.round(p / rows[0][1] * 100)}"><i></i></div><b>${p}%</b></div>`).join("");
   document.getElementById("visitInfo").innerHTML = vi ? `
-    <p class="sub">이 근처 후기와 게시물 ${vi.n}건을 AI가 읽고 정리했어요</p>
+    <p class="sub">이 근처 후기와 게시물 ${vi.n}건을 AI가 읽고 정리했어요 <span class="badge">예시</span></p>
     <div class="vsec"><span class="label">누가 오나요</span>${bars(vi.who)}</div>
     <div class="vsec"><span class="label">언제 오나요</span>${bars(vi.when)}<span class="cap">야시장은 저녁 7시부터 문 닫을 때까지</span></div>
     <div class="vsec"><span class="label">무엇 때문에 오나요</span><p>${esc(vi.why)}</p></div>
